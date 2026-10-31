@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /assets/dashboards/
+
+Sitemap: https://cync.digital/sitemap.xml
