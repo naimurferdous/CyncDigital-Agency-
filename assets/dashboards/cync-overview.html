@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cync Digital - Partner Performance Console</title>
+<meta name="description" content="Reference build of a partner performance reporting console, showing overview KPIs, engagement history, and partner breakdowns for Cync Digital.">
+<meta name="robots" content="noindex,nofollow">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --navy:#12181F; --navbar:#0F1620;
+    --bg:#F5F6F8; --card:#FFFFFF; --border:#E4E7EC;
+    --text:#1A1F27; --muted:#6B7280; --muted-2:#9AA2AE;
+    --signal:#E9A23B; --signal-soft:#FDF2E3;
+    --blue:#2D6CDF; --blue-soft:#EAF1FE;
+    --green:#16A34A; --green-soft:#E8F7EE;
+    --sync:#0D9488;
+    --mono:'IBM Plex Mono','JetBrains Mono',ui-monospace,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ font-family:var(--sans); background:var(--bg); color:var(--text); font-size:14px; }
+  a{ text-decoration:none; color:inherit; }
+
+  .navbar{ background:var(--navbar); color:#C7CCD4; padding:0 24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+  .navbar .brand{ display:flex; align-items:center; gap:9px; padding:14px 0; }
+  .navbar .brand .mark{ width:22px; height:22px; border-radius:6px; background:linear-gradient(135deg,var(--signal),#B97A22); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:11px; color:var(--navy); }
+  .navbar .brand .name{ font-weight:700; font-size:13.5px; color:#fff; letter-spacing:0.01em; }
+  .navtabs{ display:flex; gap:20px; flex-wrap:wrap; }
+  .navtabs span{ font-size:12.5px; color:#8891A0; padding:14px 0; border-bottom:2px solid transparent; }
+  .navtabs span.active{ color:#fff; border-bottom-color:var(--signal); }
+  .navtabs span.linked{ cursor:pointer; }
+  .navtabs span.linked:hover{ color:#fff; }
+  .navtabs span.disabled{ opacity:0.4; cursor:default; }
+  tbody tr.linkrow{ cursor:pointer; }
+  tbody tr.linkrow:hover{ background:#FAFBFC; }
+  tbody tr.linkrow td:first-child{ color:var(--blue); font-weight:600; }
+  tbody tr.linkrow .arrow{ font-size:10px; color:var(--muted-2); margin-left:6px; }
+
+  .topbar{ background:var(--card); border-bottom:1px solid var(--border); padding:12px 24px; display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; align-items:center; }
+  .topbar .path{ font-size:11.5px; color:var(--muted-2); font-family:var(--mono); }
+  .topbar-right{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .chip{ font-size:11.5px; padding:5px 11px; border:1px solid var(--border); border-radius:7px; color:var(--muted); font-family:var(--mono); background:#FAFBFC; }
+
+  .banner{ background:var(--signal-soft); border-bottom:1px solid var(--border); padding:10px 24px; font-size:11.5px; line-height:1.6; color:var(--muted); font-family:var(--mono); }
+  .banner strong{ color:var(--text); }
+
+  .content{ padding:20px 24px 60px; max-width:1280px; margin:0 auto; }
+
+  .kpi-row{ display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:20px; }
+  .kpi-card{ background:var(--card); border:1px solid var(--border); border-radius:9px; padding:14px 16px; }
+  .kpi-card .lbl{ font-size:10.5px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.04em; }
+  .kpi-card .val{ font-family:var(--mono); font-size:21px; font-weight:700; margin-top:8px; color:var(--text); }
+  .kpi-card .sub{ font-size:10px; color:var(--muted-2); margin-top:3px; }
+
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  .card{ background:var(--card); border:1px solid var(--border); border-radius:10px; padding:18px 20px; margin-bottom:16px; }
+  .card-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px; }
+  .card-head h3{ font-size:13.5px; font-weight:700; }
+  .chart-box{ height:210px; }
+
+  table{ width:100%; border-collapse:collapse; }
+  thead th{ text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted-2); padding:0 10px 8px; border-bottom:1px solid var(--border); font-weight:600; }
+  tbody td{ padding:10px 10px; border-bottom:1px solid #F0F1F3; font-size:12.5px; }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr.totals td{ font-weight:700; border-top:1px solid var(--border); border-bottom:none; padding-top:10px; }
+
+  .region-row{ display:grid; grid-template-columns:110px 1fr 60px; align-items:center; gap:10px; margin-bottom:10px; }
+  .region-row:last-child{ margin-bottom:0; }
+  .region-row .rname{ font-size:12.5px; font-weight:600; }
+  .rtrack{ background:#EEF0F3; border-radius:5px; height:18px; overflow:hidden; }
+  .rfill{ height:100%; border-radius:5px; background:linear-gradient(90deg,var(--blue),#5B8DEA); }
+  .region-row .rval{ font-family:var(--mono); font-size:11.5px; font-weight:700; text-align:right; }
+
+  .note{ font-size:11px; color:var(--muted-2); margin-top:12px; font-style:italic; line-height:1.5; }
+
+  @media (max-width:900px){
+    .kpi-row{ grid-template-columns:repeat(3,1fr); }
+    .grid-2{ grid-template-columns:1fr; }
+  }
+  @media (max-width:640px){
+    .navtabs{ gap:12px; }
+    .navtabs span{ font-size:11px; padding:10px 0; }
+    .content{ padding:16px 16px 50px; }
+    .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; }
+    .kpi-card{ padding:12px 12px; }
+    .kpi-card .val{ font-size:18px; }
+    .card{ padding:14px 16px; }
+    .region-row{ grid-template-columns:80px 1fr 44px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <div class="brand"><div class="mark">C</div><div class="name">CYNC DIGITAL</div></div>
+  <div class="navtabs">
+    <span class="active linked" data-target="top">Overview</span>
+    <span class="linked" data-target="engagementCard">Engagements</span>
+    <span class="linked" data-target="channelCard">Channels</span>
+    <span class="linked" data-target="dealStructureCard">Deal Structure</span>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="path">partner-console / overview</div>
+  <div class="topbar-right">
+    <span class="chip">2023 – 2026</span>
+    <span class="chip">NetRefer + HubSpot</span>
+  </div>
+</div>
+
+<div class="banner">
+  <strong>Career performance view.</strong> KPI totals and the By Engagement table below are real career figures. Channel mix and regional split are representative breakdowns of the real totals, not exported reports.
+</div>
+
+<div class="content" id="top">
+
+  <div class="kpi-row">
+    <div class="kpi-card"><div class="lbl">Partners</div><div class="val">240+</div><div class="sub">relationships built</div></div>
+    <div class="kpi-card"><div class="lbl">Active Partners</div><div class="val">60+</div><div class="sub">revenue-generating, Cync Digital</div></div>
+    <div class="kpi-card"><div class="lbl">Deals Sourced</div><div class="val">50+</div><div class="sub">Emami trade &amp; distribution</div></div>
+    <div class="kpi-card"><div class="lbl">Campaigns</div><div class="val">20+</div><div class="sub">launched, Emami</div></div>
+    <div class="kpi-card"><div class="lbl">Reporting Speed</div><div class="val">+60%</div><div class="sub">via AI automation, Cync Digital</div></div>
+    <div class="kpi-card"><div class="lbl">Engagements</div><div class="val">3</div><div class="sub">2023 – present</div></div>
+  </div>
+
+  <div class="card" id="engagementCard">
+    <div class="card-head"><h3>By Engagement</h3><span class="chip">2023–2026</span></div>
+    <div class="grid-2" style="margin-bottom:0;">
+      <div class="chart-box"><canvas id="engagementChart"></canvas></div>
+      <div>
+        <table>
+          <thead><tr><th>Engagement</th><th>Partners</th><th>Structure</th></tr></thead>
+          <tbody>
+            <tr class="linkrow" onclick="window.open('itlabs22-console.html','_blank')"><td>ITLABS22 <span class="arrow">↗</span></td><td class="mono">100+</td><td>CPA/RevShare/Hybrid</td></tr>
+            <tr class="linkrow" onclick="window.open('cync-digital-console.html','_blank')"><td>Cync Digital <span class="arrow">↗</span></td><td class="mono">140+ <span style="color:var(--muted-2); font-weight:400;">(60+ active)</span></td><td>Tiered CPA/RevShare/Hybrid</td></tr>
+            <tr class="linkrow" onclick="window.open('emami-console.html','_blank')"><td>Emami Bangladesh <span class="arrow">↗</span> <span style="color:var(--green);font-size:10.5px;font-weight:700;">+22%</span></td><td>50+ trade deals</td><td>Trade &amp; Distribution</td></tr>
+            <tr class="totals"><td>Total Partners</td><td>240+</td><td></td></tr>
+          </tbody>
+        </table>
+        <div class="note" style="margin-top:8px;">Total counts partner relationships (ITLABS22 + Cync Digital) only. Emami's 50+ is a trade-deal network, tracked separately.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card" id="channelCard">
+      <div class="card-head"><h3>By Channel</h3><span class="chip">Representative mix</span></div>
+      <div class="chart-box"><canvas id="channelChart"></canvas></div>
+      <div class="note">Mix is a representative breakdown of recruitment channels used across engagements (creator/publisher, partner pipeline) - the 240+ total is real.</div>
+    </div>
+    <div class="card" id="dealStructureCard">
+      <div class="card-head"><h3>By Deal Structure</h3><span class="chip">Representative mix</span></div>
+      <div class="region-row"><div class="rname">CPA</div><div class="rtrack"><div class="rfill" style="width:38%;"></div></div><div class="rval">38%</div></div>
+      <div class="region-row"><div class="rname">RevShare</div><div class="rtrack"><div class="rfill" style="width:27%;"></div></div><div class="rval">27%</div></div>
+      <div class="region-row"><div class="rname">Hybrid</div><div class="rtrack"><div class="rfill" style="width:35%;"></div></div><div class="rval">35%</div></div>
+      <div class="note">Split reflects the deal structures actually negotiated (CPA/RevShare/Hybrid) across the 240+ partner base - a representative proportion, not an exported report.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  document.querySelectorAll('.navtabs span.linked').forEach(tab => {
+    tab.addEventListener('click', () => {
+      if (tab.dataset.href) { window.open(tab.dataset.href, '_blank'); return; }
+      document.querySelectorAll('.navtabs span').forEach(s => s.classList.remove('active'));
+      tab.classList.add('active');
+      const target = document.getElementById(tab.dataset.target);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  Chart.defaults.font.family = "'IBM Plex Mono','JetBrains Mono',monospace";
+  Chart.defaults.font.size = 10.5;
+  Chart.defaults.color = '#9AA2AE';
+  const gridColor = '#EEF0F3';
+
+  new Chart(document.getElementById('engagementChart'), {
+    type: 'bar',
+    data: {
+      labels: ['ITLABS22','Cync Digital'],
+      datasets: [{ data:[100,140], backgroundColor:['#7C3AED','#E9A23B'], borderRadius:5, maxBarThickness:70 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{ grid:{display:false} }, y:{ grid:{color:gridColor}, ticks:{callback:v=>v+'+'}, beginAtZero:true } } }
+  });
+
+  new Chart(document.getElementById('channelChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Creator / publisher','Partner pipeline'],
+      datasets: [{ data:[42,58], backgroundColor:['#E9A23B','#0D9488'], borderWidth:0 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{boxWidth:10, padding:12}}} }
+  });
+</script>
+</body>
+</html>

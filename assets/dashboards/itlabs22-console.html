@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ITLABS22 - Affiliate Partner Console</title>
+<meta name="description" content="Engagement console for the ITLABS22 affiliate partner program, with pipeline, activation, and deal room reporting.">
+<meta name="robots" content="noindex,nofollow">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --sidebar:#12161D; --sidebar-hover:#1B212B;
+    --bg:#F5F6F8; --card:#FFFFFF; --border:#E4E7EC;
+    --text:#1A1F27; --muted:#6B7280; --muted-2:#9AA2AE;
+    --blue:#2D6CDF; --blue-soft:#EAF1FE;
+    --green:#16A34A; --green-soft:#E8F7EE;
+    --amber:#D97706; --amber-soft:#FDF2E3;
+    --red:#DC2626; --red-soft:#FDECEC;
+    --purple:#7C3AED; --purple-soft:#F1EBFE;
+    --mono:'IBM Plex Mono','JetBrains Mono',ui-monospace,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ font-family:var(--sans); background:var(--bg); color:var(--text); font-size:14px; }
+  a{ text-decoration:none; color:inherit; }
+  .shell{ display:flex; min-height:100vh; }
+  .sidebar{ width:222px; background:var(--sidebar); color:#C7CCD4; flex-shrink:0; display:flex; flex-direction:column; position:sticky; top:0; height:100vh; }
+  .brand{ padding:22px 20px 18px; border-bottom:1px solid rgba(255,255,255,0.08); }
+  .brand .logo{ display:flex; align-items:center; gap:9px; }
+  .brand .dot{ width:9px; height:9px; border-radius:2px; background:var(--purple); }
+  .brand .name{ font-weight:700; font-size:13.5px; color:#fff; letter-spacing:0.01em; }
+  .brand .tag{ font-size:11px; color:#6B7280; margin-top:4px; font-family:var(--mono); }
+  .nav{ padding:14px 10px; flex:1; }
+  .nav .section-lbl{ font-size:10.5px; color:#5B6472; text-transform:uppercase; letter-spacing:0.08em; padding:12px 10px 6px; }
+  .nav-item{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:7px; font-size:13px; color:#AEB4BF; cursor:pointer; margin-bottom:1px; }
+  .nav-item .ic{ width:15px; text-align:center; font-size:13px; opacity:0.8; }
+  .nav-item:hover{ background:var(--sidebar-hover); color:#fff; }
+  .nav-item.active{ background:rgba(124,58,237,0.18); color:#fff; box-shadow:inset 2px 0 0 var(--purple); }
+  .nav-item.active .ic{ opacity:1; color:var(--purple); }
+  .sidebar-foot{ padding:16px 20px; border-top:1px solid rgba(255,255,255,0.08); }
+  .who{ display:flex; align-items:center; gap:9px; }
+  .avatar{ width:28px; height:28px; border-radius:6px; background:linear-gradient(135deg,#7C3AED,#B08DF5); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#fff; }
+  .who .n{ font-size:12.5px; color:#E4E7EC; font-weight:600; }
+  .who .r{ font-size:10.5px; color:#6B7280; }
+  .main{ flex:1; min-width:0; }
+  .topbar{ background:var(--card); border-bottom:1px solid var(--border); padding:14px 20px; display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:10; }
+  .topbar h1{ font-size:16.5px; font-weight:700; }
+  .topbar .path{ font-size:11.5px; color:var(--muted-2); font-family:var(--mono); margin-top:2px; }
+  .topbar-right{ display:flex; align-items:center; gap:10px; }
+  .chip{ font-size:12px; padding:6px 12px; border:1px solid var(--border); border-radius:7px; color:var(--muted); font-family:var(--mono); background:#FAFBFC; }
+  .btn-export{ font-size:12.5px; padding:7px 14px; border-radius:7px; background:var(--text); color:#fff; font-weight:600; border:none; }
+  .content{ padding:26px 30px 60px; max-width:1240px; }
+  .panel-view{ display:none; }
+  .panel-view.active{ display:block; }
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:22px; }
+  .kpi-card{ background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px 18px; }
+  .kpi-card .top{ display:flex; justify-content:space-between; align-items:flex-start; }
+  .kpi-card .lbl{ font-size:11.5px; color:var(--muted); font-weight:500; }
+  .kpi-card .badge{ font-size:10.5px; font-family:var(--mono); padding:2px 6px; border-radius:5px; font-weight:600; background:var(--green-soft); color:var(--green); }
+  .kpi-card .val{ font-family:var(--mono); font-size:24px; font-weight:700; margin-top:8px; }
+  .grid-2{ display:grid; grid-template-columns:1.3fr 1fr; gap:16px; margin-bottom:16px; }
+  .card{ background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px 22px; margin-bottom:16px; }
+  .card-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  .card-head h3{ font-size:13.5px; font-weight:700; }
+  .card-head .sub{ font-size:11px; color:var(--muted-2); margin-top:2px; }
+  .chart-box{ height:220px; }
+  .note{ font-size:11px; color:var(--muted-2); margin-top:12px; font-style:italic; line-height:1.5; }
+  table{ width:100%; border-collapse:collapse; }
+  thead th{ text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted-2); padding:0 14px 10px; border-bottom:1px solid var(--border); font-weight:600; }
+  tbody td{ padding:12px 14px; border-bottom:1px solid #F0F1F3; font-size:12.5px; }
+  tbody tr:hover{ background:#FAFBFC; }
+  .pid{ font-family:var(--mono); color:var(--muted); font-size:11.5px; }
+  .pname{ font-weight:600; }
+  .pill{ font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:20px; display:inline-block; }
+  .pill.active{ background:var(--green-soft); color:var(--green); }
+  .pill.paid{ background:var(--blue-soft); color:var(--blue); }
+  .pill.review{ background:var(--amber-soft); color:var(--amber); }
+  .tier{ font-family:var(--mono); font-size:11px; color:var(--muted); }
+  .funnel{ display:flex; flex-direction:column; gap:10px; }
+  .fbar-row{ display:grid; grid-template-columns:160px 1fr 90px; align-items:center; gap:12px; }
+  .fbar-row .flabel{ font-size:12px; font-weight:600; }
+  .fbar-track{ background:#EEF0F3; border-radius:5px; height:24px; }
+  .fbar-fill{ height:100%; border-radius:5px; }
+  .fbar-row .fval{ font-family:var(--mono); font-size:12px; font-weight:700; text-align:right; }
+  .fit-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+  .fit-card{ background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px; }
+  .fit-card .code{ font-family:var(--mono); font-size:10.5px; color:var(--purple); font-weight:700; margin-bottom:10px; }
+  .fit-card h4{ font-size:14px; margin-bottom:8px; }
+  .fit-card p{ font-size:12.5px; color:var(--muted); line-height:1.6; }
+  @media (max-width:980px){
+    .kpi-row{ grid-template-columns:repeat(2,1fr); } .grid-2{ grid-template-columns:1fr; }
+    .fit-grid{ grid-template-columns:1fr; }
+    .shell{ flex-direction:column; }
+    .sidebar{ width:100%; height:auto; position:relative; flex-direction:row; align-items:center; overflow-x:auto; }
+    .brand,.sidebar-foot{ display:none; }
+    .nav{ display:flex; flex-direction:row; padding:8px 10px; gap:4px; flex:none; }
+    .nav .section-lbl{ display:none; }
+    .nav-item{ white-space:nowrap; margin-bottom:0; }
+  }
+  @media (max-width:640px){
+    .content{ padding:16px 16px 50px; }
+    .topbar{ padding:12px 16px; }
+    .topbar h1{ font-size:15px; }
+    .card{ padding:16px 16px; }
+    .card-head{ flex-wrap:wrap; gap:8px; }
+    .kpi-row{ grid-template-columns:1fr 1fr; gap:10px; }
+    .kpi-card{ padding:14px 14px; }
+    .kpi-card .val{ font-size:20px; }
+    .fbar-row{ grid-template-columns:100px 1fr 44px; gap:8px; }
+    .fbar-row .flabel{ font-size:11px; }
+    .fbar-row .fval{ font-size:11px; }
+    .deal-head{ flex-wrap:wrap; gap:8px; }
+    .deal-head h2{ font-size:15px; }
+    table{ display:block; overflow-x:auto; white-space:nowrap; }
+    .btn-export{ display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="sidebar">
+    <div class="brand">
+      <div class="logo"><span class="dot"></span><span class="name">ITLABS22 CONSOLE</span></div>
+      <div class="tag">Riga, Latvia (Remote) · Jan–Oct 2023</div>
+    </div>
+    <div class="nav">
+      <div class="section-lbl">Engagement</div>
+      <div class="nav-item active" data-view="overview"><span class="ic">◱</span> Overview</div>
+      <div class="nav-item" data-view="channels"><span class="ic">⇄</span> Channel Mix</div>
+      <div class="nav-item" data-view="products"><span class="ic">▤</span> Product Coverage</div>
+      <div class="nav-item" data-view="quality"><span class="ic">✓</span> Traffic Quality</div>
+    </div>
+    <div class="sidebar-foot">
+      <div class="who"><div class="avatar">NF</div><div><div class="n">Naimur Ferdous</div><div class="r">Affiliate Marketing Manager</div></div></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1 id="viewTitle">Overview</h1><div class="path" id="viewPath">itlabs22 / overview</div></div>
+      <div class="topbar-right">
+        <span class="chip">Jan – Oct 2023</span>
+        <span class="chip">NetRefer Platform</span>
+        <button class="btn-export">Portfolio Reference Build</button>
+      </div>
+    </div>
+
+    <div style="background:#FDF2E3; border-bottom:1px solid #E4E7EC; padding:10px 30px; font-size:11.5px; line-height:1.6; color:#6B7280; font-family:'IBM Plex Mono','JetBrains Mono',monospace;">
+      KPIs above (100+ partners, 20+ products, 3 deal structures, 4 channels) are real figures from this engagement. Funnel edges, channel mix, and product rows below are reconstructed to demonstrate reporting fluency - not exported data.
+    </div>
+
+    <div class="content">
+
+      <!-- OVERVIEW -->
+      <div class="panel-view active" id="view-overview">
+        <div class="kpi-row">
+          <div class="kpi-card"><div class="top"><span class="lbl">Partners recruited & onboarded</span><span class="badge">▲ built</span></div><div class="val">100+</div></div>
+          <div class="kpi-card"><div class="top"><span class="lbl">Products tracked</span><span class="badge">live</span></div><div class="val">20+</div></div>
+          <div class="kpi-card"><div class="top"><span class="lbl">Deal structures negotiated</span><span class="badge">active</span></div><div class="val">3 types</div></div>
+          <div class="kpi-card"><div class="top"><span class="lbl">Acquisition channels</span><span class="badge">covered</span></div><div class="val">4</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><div><h3>Role Summary</h3><div class="sub">Affiliate Marketing Manager - regional product line</div></div></div>
+          <p style="font-size:13px; line-height:1.7; color:#374151;">Executed BD strategy across a specific product region for a Riga-based affiliate network - building the program from scratch. Negotiated CPA, RevShare, and Hybrid commission structures directly with partners, recruiting across YouTube, blogs, and social channels, then coordinated payouts and campaign assets across a 20+ product catalogue while running traffic quality and fraud prevention checks on incoming volume.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><div><h3>Program Funnel</h3><div class="sub">Recruitment → deal structuring → live tracking</div></div></div>
+          <div class="funnel">
+            <div class="fbar-row"><div class="flabel">Partners approached</div><div class="fbar-track"><div class="fbar-fill" style="width:100%; background:#7C3AED;"></div></div><div class="fval">~160</div></div>
+            <div class="fbar-row"><div class="flabel">Recruited & onboarded</div><div class="fbar-track"><div class="fbar-fill" style="width:63%; background:#2D6CDF;"></div></div><div class="fval">100+</div></div>
+            <div class="fbar-row"><div class="flabel">Live &amp; tracked on dashboard</div><div class="fbar-track"><div class="fbar-fill" style="width:56%; background:#16A34A;"></div></div><div class="fval">~90</div></div>
+          </div>
+          <div class="note">Approached/live edges are modeled; "Recruited & onboarded" (100+) is the real figure.</div>
+        </div>
+      </div>
+
+      <!-- CHANNELS -->
+      <div class="panel-view" id="view-channels">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><div><h3>Partner Acquisition by Channel</h3><div class="sub">Where the 100+ partners were sourced from</div></div></div>
+            <div class="chart-box"><canvas id="channelChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><div><h3>Deal Structure Mix</h3><div class="sub">CPA / RevShare / Hybrid across the network</div></div></div>
+            <div class="chart-box"><canvas id="dealChart"></canvas></div>
+          </div>
+        </div>
+        <div class="note">Channel split is representative; the underlying 100+ partner / 4-channel totals are real.</div>
+      </div>
+
+      <!-- PRODUCTS -->
+      <div class="panel-view" id="view-products">
+        <div class="card">
+          <div class="card-head"><div><h3>Product Coverage</h3><div class="sub">20+ products tracked · names redacted</div></div></div>
+          <table>
+            <thead><tr><th>Product</th><th>Assigned Partners</th><th>Deal Type</th><th>Payout Status</th></tr></thead>
+            <tbody>
+              <tr><td class="pname">Product Line A</td><td>18</td><td class="tier">Hybrid</td><td><span class="pill paid">Current</span></td></tr>
+              <tr><td class="pname">Product Line B</td><td>12</td><td class="tier">CPA · Tier 1</td><td><span class="pill paid">Current</span></td></tr>
+              <tr><td class="pname">Product Line C</td><td>9</td><td class="tier">RevShare · 35%</td><td><span class="pill review">Under Review</span></td></tr>
+              <tr><td class="pname">Product Line D</td><td>15</td><td class="tier">Hybrid</td><td><span class="pill paid">Current</span></td></tr>
+              <tr><td class="pname">Product Line E</td><td>7</td><td class="tier">CPA · Tier 2</td><td><span class="pill paid">Current</span></td></tr>
+              <tr><td class="pname">+ 15 more products</td><td>-</td><td class="tier">Mixed</td><td><span class="pill active">Tracked</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- QUALITY -->
+      <div class="panel-view" id="view-quality">
+        <div class="fit-grid">
+          <div class="fit-card">
+            <div class="code">PROCESS</div>
+            <h4>Traffic Quality & Fraud Prevention</h4>
+            <p>Ran manual and pattern-based screening on incoming affiliate traffic before payout approval - flagging click-flooding, cookie-stuffing signatures, and geo-mismatch patterns common in early-stage affiliate networks.</p>
+          </div>
+          <div class="fit-card">
+            <div class="code">PROCESS</div>
+            <h4>Payout & Campaign Asset Coordination</h4>
+            <p>Coordinated payout cycles and campaign creative/assets across the full 20+ product catalogue, keeping partner-facing materials current as commission tiers shifted.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  const navItems = document.querySelectorAll('.nav-item');
+  const views = document.querySelectorAll('.panel-view');
+  const titles = { overview:'Overview', channels:'Channel Mix', products:'Product Coverage', quality:'Traffic Quality' };
+  navItems.forEach(item=>{
+    item.addEventListener('click', ()=>{
+      navItems.forEach(i=>i.classList.remove('active'));
+      item.classList.add('active');
+      const key = item.dataset.view;
+      views.forEach(v=>v.classList.remove('active'));
+      document.getElementById('view-'+key).classList.add('active');
+      document.getElementById('viewTitle').textContent = titles[key];
+      document.getElementById('viewPath').textContent = 'itlabs22 / ' + key;
+    });
+  });
+
+  const gridColor = '#EEF0F3';
+  const textColor = '#9AA2AE';
+  Chart.defaults.font.family = "'IBM Plex Mono','JetBrains Mono',monospace";
+  Chart.defaults.font.size = 10.5;
+  Chart.defaults.color = textColor;
+
+  new Chart(document.getElementById('channelChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['YouTube','Blogs','Telegram/Discord','Facebook/WhatsApp'],
+      datasets: [{
+        data: [34, 22, 26, 18],
+        backgroundColor: ['#7C3AED','#2D6CDF','#16A34A','#D97706'],
+        borderWidth: 2, borderColor:'#fff'
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{ boxWidth:8, font:{size:10.5} } } }
+    }
+  });
+
+  new Chart(document.getElementById('dealChart'), {
+    type: 'bar',
+    data: {
+      labels: ['CPA','RevShare','Hybrid'],
+      datasets: [{
+        data: [38, 27, 35],
+        backgroundColor: ['#2D6CDF','#16A34A','#7C3AED'],
+        borderRadius: 5, maxBarThickness: 60
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{ x:{ grid:{ display:false } }, y:{ grid:{ color:gridColor }, ticks:{ callback:v=>v+'%' }, beginAtZero:true } }
+    }
+  });
+</script>
+</body>
+</html>
