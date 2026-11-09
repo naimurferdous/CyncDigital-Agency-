@@ -73,11 +73,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const progress = Math.min((now - start) / duration, 1);
         const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
         const value = Math.round(eased * target);
-        el.textContent = value + suffix;
+        el.textContent = value.toLocaleString('en-US') + suffix;
         if (progress < 1) {
           requestAnimationFrame(tick);
         } else {
-          el.textContent = target + suffix;
+          el.textContent = target.toLocaleString('en-US') + suffix;
         }
       };
       requestAnimationFrame(tick);
